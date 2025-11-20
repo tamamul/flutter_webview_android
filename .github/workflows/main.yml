@@ -1,39 +1,240 @@
-name: Build APK
+name: Build Flutter WebView Example APK
 
 on:
   push:
-    branches:
-      - master
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'  # Compatible dengan SDK >=2.14.0 <3.0.0
+        
+    - name: Verify Flutter Installation
+      run: |
+        flutter --version
+        dart --version
+        
+    - name: Accept Android Licenses
+      run: |
+        yes | flutter doctor --android-licenses || true
+        
+    - name: Install Dependencies
+      run: |
+        flutter pub get
+        
+    - name: Run Build Runner
+      run: |
+        flutter pub run build_runner build --delete-conflicting-outputs
+        
+    - name: Run Tests
+      run: |
+        flutter test
+        
+    - name: Build Example APK
+      run: |
+        # Cari directory example
+        if [ -d "example" ]; then
+          cd example
+          flutter build apk --release
+        else
+          echo "No example directory found"
+          # Buat simple example jika tidak ada
+          mkdir -p example/android/app/src/main/kotlin/com/example/webview_example
+          mkdir -p example/android/app/src/main/res/values
+          mkdir -p example/lib
+          
+          # Buat pubspec.yaml untuk example
+          cat > example/pubspec.yaml << 'EOF'
+name: webview_example
+description: Example app for webview_flutter_android
+publish_to: 'none'
+version: 1.0.0+1
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+environment:
+  sdk: ">=2.14.0 <3.0.0"
+  flutter: ">=2.5.0"
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.8'
-          channel: 'stable'
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter_android:
+    path: ../
 
-      - name: Flutter pub get
-        run: flutter pub get
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 
-      - name: Build APK release
-        run: flutter build apk --release
+flutter:
+  uses-material-design: true
+EOF
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-release
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 4
+          # Buat main.dart untuk example
+          cat > example/lib/main.dart << 'EOF'
+import 'package:flutter/material.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+
+void main() => runApp(const WebViewExample());
+
+class WebViewExample extends StatefulWidget {
+  const WebViewExample({super.key});
+
+  @override
+  State<WebViewExample> createState() => _WebViewExampleState();
+}
+
+class _WebViewExampleState extends State<WebViewExample> {
+  final PlatformWebViewController _controller = PlatformWebViewController(
+    const PlatformWebViewControllerCreationParams(),
+  )..loadRequest(LoadRequestParams(uri: Uri.parse('https://flutter.dev')));
+
+  @override
+  void initState() {
+    super.initState();
+    if (_controller is AndroidWebViewController) {
+      (_controller as AndroidWebViewController).setMediaPlaybackRequiresUserGesture(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: const Text('WebView Example')),
+        body: PlatformWebViewWidget(
+          PlatformWebViewWidgetCreationParams(controller: _controller),
+        ).build(context),
+      ),
+    );
+  }
+}
+EOF
+
+          # Buat AndroidManifest.xml
+          cat > example/android/app/src/main/AndroidManifest.xml << 'EOF'
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application
+        android:label="WebView Example"
+        android:name="io.flutter.app.FlutterApplication"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
+EOF
+
+          # Buat strings.xml
+          cat > example/android/app/src/main/res/values/strings.xml << 'EOF'
+<resources>
+    <string name="app_name">WebView Example</string>
+</resources>
+EOF
+
+          # Buat MainActivity.kt
+          cat > example/android/app/src/main/kotlin/com/example/webview_example/MainActivity.kt << 'EOF'
+package com.example.webview_example
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}
+EOF
+
+          cd example
+          flutter pub get
+          flutter build apk --release
+        fi
+        
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: webview-flutter-apk
+        path: |
+          example/build/app/outputs/flutter-apk/app-release.apk
+          */build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+        
+    - name: Create Download Page
+      run: |
+        cat > download.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Download WebView Flutter Example</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+                .download-btn { 
+                    background: #007cba; 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    display: inline-block; 
+                    margin: 20px; 
+                    font-size: 18px;
+                }
+                .download-btn:hover { background: #005a87; }
+                .info { margin: 20px 0; color: #666; }
+            </style>
+        </head>
+        <body>
+            <h1>WebView Flutter Android Example</h1>
+            <div class="info">Version: 2.8.2</div>
+            <div class="info">Built on: $(date -u)</div>
+            <div class="info">Commit: ${{ github.sha }}</div>
+            <a href="./app-release.apk" class="download-btn">Download APK</a>
+            <div class="info">
+                <p>To install:</p>
+                <ol style="display: inline-block; text-align: left;">
+                    <li>Download the APK file above</li>
+                    <li>Enable "Install from unknown sources" in your Android settings</li>
+                    <li>Open the downloaded file to install</li>
+                </ol>
+            </div>
+        </body>
+        </html>
+        EOF
+        
+    - name: Upload Download Page
+      uses: actions/upload-artifact@v4
+      with:
+        name: download-page
+        path: download.html
+        retention-days: 30
