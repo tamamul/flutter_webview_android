@@ -24,7 +24,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.16.0'  # Compatible dengan SDK >=2.14.0 <3.0.0
+        flutter-version: '3.16.0'
         
     - name: Verify Flutter Installation
       run: |
@@ -54,14 +54,15 @@ jobs:
           cd example
           flutter build apk --release
         else
-          echo "No example directory found"
-          # Buat simple example jika tidak ada
+          echo "No example directory found, creating simple example..."
+          
+          # Buat directory structure
           mkdir -p example/android/app/src/main/kotlin/com/example/webview_example
           mkdir -p example/android/app/src/main/res/values
           mkdir -p example/lib
           
           # Buat pubspec.yaml untuk example
-          cat > example/pubspec.yaml << 'EOF'
+          cat > example/pubspec.yaml << 'ENDOFFILE'
 name: webview_example
 description: Example app for webview_flutter_android
 publish_to: 'none'
@@ -83,10 +84,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-EOF
+ENDOFFILE
 
           # Buat main.dart untuk example
-          cat > example/lib/main.dart << 'EOF'
+          cat > example/lib/main.dart << 'ENDOFFILE'
 import 'package:flutter/material.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -125,10 +126,10 @@ class _WebViewExampleState extends State<WebViewExample> {
     );
   }
 }
-EOF
+ENDOFFILE
 
           # Buat AndroidManifest.xml
-          cat > example/android/app/src/main/AndroidManifest.xml << 'EOF'
+          cat > example/android/app/src/main/AndroidManifest.xml << 'ENDOFFILE'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application
@@ -156,24 +157,24 @@ EOF
             android:value="2" />
     </application>
 </manifest>
-EOF
+ENDOFFILE
 
           # Buat strings.xml
-          cat > example/android/app/src/main/res/values/strings.xml << 'EOF'
+          cat > example/android/app/src/main/res/values/strings.xml << 'ENDOFFILE'
 <resources>
     <string name="app_name">WebView Example</string>
 </resources>
-EOF
+ENDOFFILE
 
           # Buat MainActivity.kt
-          cat > example/android/app/src/main/kotlin/com/example/webview_example/MainActivity.kt << 'EOF'
+          cat > example/android/app/src/main/kotlin/com/example/webview_example/MainActivity.kt << 'ENDOFFILE'
 package com.example.webview_example
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity: FlutterActivity() {
 }
-EOF
+ENDOFFILE
 
           cd example
           flutter pub get
@@ -191,46 +192,46 @@ EOF
         
     - name: Create Download Page
       run: |
-        cat > download.html << 'EOF'
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Download WebView Flutter Example</title>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
-                .download-btn { 
-                    background: #007cba; 
-                    color: white; 
-                    padding: 15px 30px; 
-                    text-decoration: none; 
-                    border-radius: 5px; 
-                    display: inline-block; 
-                    margin: 20px; 
-                    font-size: 18px;
-                }
-                .download-btn:hover { background: #005a87; }
-                .info { margin: 20px 0; color: #666; }
-            </style>
-        </head>
-        <body>
-            <h1>WebView Flutter Android Example</h1>
-            <div class="info">Version: 2.8.2</div>
-            <div class="info">Built on: $(date -u)</div>
-            <div class="info">Commit: ${{ github.sha }}</div>
-            <a href="./app-release.apk" class="download-btn">Download APK</a>
-            <div class="info">
-                <p>To install:</p>
-                <ol style="display: inline-block; text-align: left;">
-                    <li>Download the APK file above</li>
-                    <li>Enable "Install from unknown sources" in your Android settings</li>
-                    <li>Open the downloaded file to install</li>
-                </ol>
-            </div>
-        </body>
-        </html>
-        EOF
+        cat > download.html << 'ENDOFFILE'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download WebView Flutter Example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
+        .download-btn { 
+            background: #007cba; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            display: inline-block; 
+            margin: 20px; 
+            font-size: 18px;
+        }
+        .download-btn:hover { background: #005a87; }
+        .info { margin: 20px 0; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>WebView Flutter Android Example</h1>
+    <div class="info">Version: 2.8.2</div>
+    <div class="info">Built on: $(date -u)</div>
+    <div class="info">Commit: ${{ github.sha }}</div>
+    <a href="./app-release.apk" class="download-btn">Download APK</a>
+    <div class="info">
+        <p>To install:</p>
+        <ol style="display: inline-block; text-align: left;">
+            <li>Download the APK file above</li>
+            <li>Enable "Install from unknown sources" in your Android settings</li>
+            <li>Open the downloaded file to install</li>
+        </ol>
+    </div>
+</body>
+</html>
+ENDOFFILE
         
     - name: Upload Download Page
       uses: actions/upload-artifact@v4
