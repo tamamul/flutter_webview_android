@@ -1,6 +1,6 @@
-name: Build APK
+name: build-apk
 
-on: push: branches: - master
+on: push: branches: - master push: branches: - master
 
 jobs: build-apk: runs-on: ubuntu-latest
 
